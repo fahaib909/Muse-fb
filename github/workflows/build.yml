@@ -1,0 +1,31 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -o MuseHub.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - name: Build
+        working-directory: MuseHub
+        run: |
+          set -o pipefail
+          gradle assembleDebug --no-daemon --console=plain 2>&1 | tee ../build.log
+      - name: Show errors
+        if: failure()
+        run: |
+          msg=$(grep -E "^e: |What went wrong|error:|Execution failed|Could not|Unresolved" -A2 build.log | head -20 | sed ':a;N;$!ba;s/\n/%0A/g')
+          echo "::error::$msg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MuseHub-APK
+          path: MuseHub/app/build/outputs/apk/debug/app-debug.apk
